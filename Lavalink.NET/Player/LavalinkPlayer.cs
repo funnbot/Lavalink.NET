@@ -1,14 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
-using Lavalink.NET.Types;
+using Lavalink.NET.Client;
 using Newtonsoft.Json;
 
 namespace Lavalink.NET.Player
 {
-	/// <summary>
-	/// The Player class to use.
-	/// </summary>
-	public class Player
+    class LavalinkPlayer
     {
 		/// <summary>
 		/// Event to call on Track Ending.
@@ -33,7 +32,7 @@ namespace Lavalink.NET.Player
 		/// <summary>
 		/// The current Status of this player.
 		/// </summary>
-		public Status Status { get; private set; } = Status.INSTANTIATED;
+		public PlayerStatus Status { get; private set; } = PlayerStatus.INSTANTIATED;
 
 		/// <summary>
 		/// Boolean representing if this Player is connected to an Channel.
@@ -51,7 +50,7 @@ namespace Lavalink.NET.Player
 		public long Position
 		{
 			get {
-				if (Status == Status.PLAYING) { return _position; }
+				if (Status == PlayerStatus.PLAYING) { return _position; }
 				else return -1;
 			}
 
@@ -62,18 +61,18 @@ namespace Lavalink.NET.Player
 		/// Holds the value for the Position.
 		/// </summary>
 		private long _position;
-		
+
 		/// <summary>
 		/// Client instance that created this player.
 		/// </summary>
-		private Client _client;
+		private LavalinkClient _client;
 
 		/// <summary>
 		/// Constructor of the Player class.
 		/// </summary>
 		/// <param name="client"> The Client of this player. </param>
 		/// <param name="guildID"> The GuildID of this player. </param>
-		public Player(Client client, ulong guildID)
+		public LavalinkPlayer(LavalinkClient client, ulong guildID)
 		{
 			_client = client;
 			GuildID = guildID;
@@ -130,7 +129,7 @@ namespace Lavalink.NET.Player
 				EndTime = end.ToString()
 			}));
 
-			Status = Status.PLAYING;
+			Status = PlayerStatus.PLAYING;
 		}
 
 		/// <summary>
@@ -142,7 +141,8 @@ namespace Lavalink.NET.Player
 		/// <returns> Task resolving with void. </returns>
 		public async Task PlayAsync(Track track, int? start = 0, int? end = 0)
 		{
-			await _client.Websocket.SendMessageAsync(JsonConvert.SerializeObject(new PlayPacket {
+			await _client.Websocket.SendMessageAsync(JsonConvert.SerializeObject(new PlayPacket
+			{
 				OPCode = "play",
 				GuildID = GuildID.ToString(),
 				Track = track.TrackString,
@@ -150,7 +150,7 @@ namespace Lavalink.NET.Player
 				EndTime = end.ToString()
 			}));
 
-			Status = Status.PLAYING;
+			Status = PlayerStatus.PLAYING;
 		}
 
 		/// <summary>
@@ -160,7 +160,8 @@ namespace Lavalink.NET.Player
 		/// <returns> Task resolving with void. </returns>
 		public async Task PauseAsync(bool pause = true)
 		{
-			await _client.Websocket.SendMessageAsync(JsonConvert.SerializeObject(new PausePacket {
+			await _client.Websocket.SendMessageAsync(JsonConvert.SerializeObject(new PausePacket
+			{
 				OPCode = "pause",
 				Pause = pause,
 				GuildID = GuildID.ToString()
@@ -168,10 +169,11 @@ namespace Lavalink.NET.Player
 
 			if (pause)
 			{
-				Status = Status.PAUSED;
-			} else
+				Status = PlayerStatus.PAUSED;
+			}
+			else
 			{
-				Status = Status.PLAYING;
+				Status = PlayerStatus.PLAYING;
 			}
 		}
 
@@ -240,23 +242,23 @@ namespace Lavalink.NET.Player
 
 		private Task PlayerEndEvent(TrackEndEvent e)
 		{
-			Status = Status.ENDED;
+			Status = PlayerStatus.ENDED;
 
 			return Task.CompletedTask;
 		}
 
 		private Task PlayerExeptionEvent(TrackExceptionEvent e)
 		{
-			Status = Status.ERRORED;
+			Status = PlayerStatus.ERRORED;
 
 			return Task.CompletedTask;
 		}
 
 		private Task PlayerStuckEvent(TrackStuckEvent e)
 		{
-			Status = Status.STUCK;
+			Status = PlayerStatus.STUCK;
 
 			return Task.CompletedTask;
 		}
-    }
+	}
 }

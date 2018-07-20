@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Lavalink.NET.Types
+namespace Lavalink.NET.Logging
 {
 	/// <summary>
-	/// Different levels of logs.
+	/// Different levels for logs.
 	/// </summary>
-    public enum LogLevel
+	public enum LogLevel
 	{
 		/// <summary>
 		/// Shows from Debug to Error all logs. usefull in developement.
@@ -18,11 +18,11 @@ namespace Lavalink.NET.Types
 		/// </summary>
 		Info,
 		/// <summary>
-		/// Shows warnings and Errors. usefull in production when you dont want that much output.
+		/// Shows Warnings and Errors. usefull in production.
 		/// </summary>
 		Warning,
 		/// <summary>
-		/// Only shows errors. usefull if you only want critical information.
+		/// Only shows Errors. usefull if you only want critical information.
 		/// </summary>
 		Error
 	}

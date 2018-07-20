@@ -59,10 +59,10 @@ namespace Lavalink.NET.Types
 	/// <summary>
 	/// The Track with all the needed information from Lavalink.
 	/// </summary>
-    public class Track
-    {
+	public class Track
+	{
 		/// <summary>
-		/// The TrackString that lavalink sent/needs to play Songs.
+		/// The TrackString that lavalink sends/needs to play Songs.
 		/// </summary>
 		[JsonProperty("track")]
 		public string TrackString { get; set; }
@@ -72,5 +72,5 @@ namespace Lavalink.NET.Types
 		/// </summary>
 		[JsonProperty("info")]
 		public TrackInfo TrackInfo { get; set; }
-    }
+	}
 }

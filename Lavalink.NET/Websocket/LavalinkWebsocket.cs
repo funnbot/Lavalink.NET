@@ -6,30 +6,15 @@ using System.Threading.Tasks;
 
 namespace Lavalink.NET.Websocket
 {
-	internal class WebsocketOptions
+	internal class LavalinkWebsocket : IDisposable
 	{
-		internal string Host { get; set; }
-		internal string Password { get; set; }
-		internal string UserID { get; set; }
-		internal string ShardCount { get; set; }
+		internal event Action<WebSocketCloseStatus, string> Disconnect;
+		internal event Action<Exception> ConnectionFailed;
+		internal event Action<string> LogMessage;
+		internal event Action<string> Message;
+		internal event Action Ready;
 
-		internal WebsocketOptions(string host, string password, ulong userID, int shardCount)
-		{
-			Host = host ?? throw new ArgumentNullException(nameof(host));
-			Password = password ?? throw new ArgumentNullException(nameof(password));
-			UserID = userID.ToString();
-			ShardCount = shardCount.ToString();
-		}
-	}
-
-	internal class Websocket
-	{
-		internal event Func<Exception, Task> ConnectionFailed;
-		internal event Func<string, Task> Message;
-		internal event Func<Task> Ready;
-		internal event Func<WebSocketCloseStatus, string, Task> Close;
-		internal event Func<Exception, Task> Error;
-		internal event Func<string, Task> Debug;
+		internal bool Connected = false;
 
 		private const int ReceiveChunkSize = 1024;
 		private const int SendChunkSize = 1024;
@@ -39,18 +24,24 @@ namespace Lavalink.NET.Websocket
 		private readonly ClientWebSocket _ws;
 		private readonly Uri _uri;
 
-		internal Websocket(WebsocketOptions options)
+		internal LavalinkWebsocket(LavalinkWebsocketConfig options)
 		{
 			_ws = new ClientWebSocket();
 			_ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
-			_ws.Options.SetRequestHeader("Authorization", options.Password);
+			_ws.Options.SetRequestHeader("Authorization", options.NodeInfo.Authorization);
 			_ws.Options.SetRequestHeader("Num-Shards", options.ShardCount);
 			_ws.Options.SetRequestHeader("User-Id", options.UserID);
-			_uri = new Uri(options.Host);
+			_uri = new Uri(options.NodeInfo.WebsocketHost);
 			_cancellationToken = _cancellationTokenSource.Token;
 		}
 
-		internal async void ConnectAsync()
+		public void Dispose()
+		{
+			((IDisposable) _ws).Dispose();
+			_cancellationTokenSource.Dispose();
+		}
+
+		internal async void Connect()
 		{
 			try
 			{
@@ -63,7 +54,18 @@ namespace Lavalink.NET.Websocket
 			}
 			Debug?.Invoke("Websocket Connection succesfully established");
 			Ready?.Invoke();
+			Connected = true;
 			StartListen();
+		}
+
+		internal async Task DisconnectAsync()
+		{
+			if (_ws.State == WebSocketState.Open)
+			{
+				await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, String.Empty, _cancellationToken);
+				Connected = false;
+				Dispose();
+			}
 		}
 
 		internal async Task SendMessageAsync(string message)
@@ -108,8 +110,8 @@ namespace Lavalink.NET.Websocket
 
 						if (result.MessageType == WebSocketMessageType.Close)
 						{
-							await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
-							Close?.Invoke((WebSocketCloseStatus) _ws.CloseStatus, _ws.CloseStatusDescription);
+							await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, _cancellationToken);
+							Disconnect?.Invoke((WebSocketCloseStatus) _ws.CloseStatus, _ws.CloseStatusDescription);
 						}
 						else
 						{
@@ -119,30 +121,19 @@ namespace Lavalink.NET.Websocket
 
 					} while (!result.EndOfMessage);
 
-					if (stringResult.ToString().Length > 0) ThreadPool.QueueUserWorkItem((Object stateInfo) => InvokeMessageEvent(stringResult.ToString()));
+					var resultAsString = stringResult.ToString();
 
-
+					if (resultAsString.Length > 0) Message?.Invoke(resultAsString);
 				}
 			}
 			catch (Exception)
 			{
-				Close?.Invoke((WebSocketCloseStatus) _ws.CloseStatus, _ws.CloseStatusDescription);
+				await DisconnectAsync();
+				Disconnect?.Invoke((WebSocketCloseStatus) _ws.CloseStatus, _ws.CloseStatusDescription);
 			}
 			finally
 			{
 				_ws.Dispose();
-			}
-		}
-
-		private async void InvokeMessageEvent(string args)
-		{
-			try
-			{
-				await Message?.Invoke(args);
-			}
-			catch (Exception e)
-			{
-				Error?.Invoke(e);
 			}
 		}
 	}

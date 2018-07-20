@@ -1,10 +1,13 @@
-﻿
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
 namespace Lavalink.NET.Player
 {
 	/// <summary>
-	/// Status enum for players.
+	/// PlayerStatus for LavalinkPlayers.
 	/// </summary>
-	public enum Status
+	public enum PlayerStatus
 	{
 		/// <summary>
 		/// Player was Instantiated.
